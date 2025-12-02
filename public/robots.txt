@@ -1,0 +1,19 @@
+# Jengalabs - Web Crawling Rules
+
+# Allow all robots by default
+User-agent: *
+Allow: /
+
+# Disallow sensitive paths
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /.next/
+Disallow: /private/
+
+# Sitemap
+Sitemap: https://jengalabs.com/sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 1
