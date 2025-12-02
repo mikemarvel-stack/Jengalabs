@@ -5,12 +5,14 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
   id            String            @id @default(cuid())
-  name          String
+  name          String?
   email         String            @unique
+  emailVerified DateTime?
   password      String?
   avatar        String?
   bio           String?
@@ -19,7 +21,6 @@ model User {
   role          Role              @default(USER)
   subscription  SubscriptionTier  @default(FREE)
   aiCredits     Int               @default(5)
-  emailVerified DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   
@@ -29,77 +30,91 @@ model User {
   discussions   Discussion[]
   aiRequests    AIRequest[]
   testimonials  Testimonial[]
+  contacts      Contact[]
   
+  @@index([email])
   @@map("users")
 }
 
 model Project {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  description String
-  content     String?       @db.Text
-  techStack   String[]
-  screenshots String[]
-  demoUrl     String?
-  githubUrl   String?
-  featured    Boolean       @default(false)
-  viewCount   Int           @default(0)
-  category    String
-  status      ProjectStatus @default(ACTIVE)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  title         String
+  slug          String        @unique
+  description   String
+  content       String?       @db.Text
+  techStack     String[]
+  screenshots   String[]
+  demoUrl       String?
+  githubUrl     String?
+  featured      Boolean       @default(false)
+  viewCount     Int           @default(0)
+  category      String
+  status        ProjectStatus @default(ACTIVE)
+  seoTitle      String?
+  seoDescription String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   
   // Relations
-  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId    String
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId      String
   
+  @@index([slug])
+  @@index([authorId])
+  @@index([featured])
   @@map("projects")
 }
 
 model BlogPost {
-  id          String       @id @default(cuid())
-  title       String
-  slug        String       @unique
-  content     String       @db.Text
-  summary     String
-  coverImage  String?
-  tags        String[]
-  published   Boolean      @default(false)
-  featured    Boolean      @default(false)
-  viewCount   Int          @default(0)
-  readTime    Int?         // in minutes
-  seoTitle    String?
+  id            String        @id @default(cuid())
+  title         String
+  slug          String        @unique
+  content       String        @db.Text
+  summary       String
+  coverImage    String?
+  tags          String[]
+  published     Boolean       @default(false)
+  featured      Boolean       @default(false)
+  viewCount     Int           @default(0)
+  readTime      Int?          // in minutes
+  seoTitle      String?
   seoDescription String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  publishedAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  publishedAt   DateTime?
   
   // Relations
-  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId    String
-  discussions Discussion[]
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId      String
+  discussions   Discussion[]
   
+  @@index([slug])
+  @@index([authorId])
+  @@index([published])
+  @@index([featured])
   @@map("blog_posts")
 }
 
 model Discussion {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  upvotes   Int      @default(0)
-  downvotes Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String        @id @default(cuid())
+  content   String        @db.Text
+  upvotes   Int           @default(0)
+  downvotes Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   
   // Relations
-  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
-  post     BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId   String?
-  parent   Discussion? @relation("DiscussionReplies", fields: [parentId], references: [id])
-  parentId String?
-  replies  Discussion[] @relation("DiscussionReplies")
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  post      BlogPost?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String?
+  parent    Discussion?   @relation("DiscussionReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String?
+  replies   Discussion[]  @relation("DiscussionReplies")
   
+  @@index([authorId])
+  @@index([postId])
+  @@index([parentId])
   @@map("discussions")
 }
 
@@ -119,74 +134,82 @@ model Service {
 }
 
 model AIRequest {
-  id          String          @id @default(cuid())
-  prompt      String          @db.Text
-  response    String?         @db.Text
-  model       String          @default("groq-llama")
-  status      AIRequestStatus @default(PENDING)
-  creditsUsed Int
-  processingTime Int?         // in milliseconds
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id             String           @id @default(cuid())
+  prompt         String           @db.Text
+  response       String?          @db.Text
+  model          String           @default("groq-llama")
+  status         AIRequestStatus  @default(PENDING)
+  creditsUsed    Int
+  processingTime Int?             // in milliseconds
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   
   // Relations
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
   
+  @@index([userId])
+  @@index([status])
   @@map("ai_requests")
 }
 
 model Newsletter {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  subscribed Boolean  @default(true)
-  source     String?  // where they subscribed from
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id         String    @id @default(cuid())
+  email      String    @unique
+  subscribed Boolean   @default(true)
+  source     String?   // where they subscribed from
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   
+  @@index([email])
   @@map("newsletter")
 }
 
 model Analytics {
-  id        String   @id @default(cuid())
-  path      String
-  views     Int      @default(1)
-  uniqueViews Int    @default(1)
-  referrer  String?
-  userAgent String?
-  country   String?
-  date      DateTime @default(now())
+  id          String    @id @default(cuid())
+  path        String
+  views       Int       @default(1)
+  uniqueViews Int       @default(1)
+  referrer    String?
+  userAgent   String?
+  country     String?
+  date        DateTime  @default(now())
   
   @@unique([path, date])
+  @@index([path])
   @@map("analytics")
 }
 
 model Testimonial {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  rating    Int      @default(5)
-  featured  Boolean  @default(false)
-  approved  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(cuid())
+  content   String    @db.Text
+  rating    Int       @default(5)
+  featured  Boolean   @default(false)
+  approved  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   
   // Relations
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String
   
+  @@index([authorId])
+  @@index([approved])
   @@map("testimonials")
 }
 
 model Contact {
-  id        String      @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
   email     String
   subject   String
-  message   String      @db.Text
+  message   String        @db.Text
   status    ContactStatus @default(PENDING)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   
+  @@index([email])
+  @@index([status])
   @@map("contacts")
 }
 
